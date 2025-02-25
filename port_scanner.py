@@ -1,5 +1,6 @@
 #!/bin/python3
 import argparse
+import multiprocessing as mp
 import re
 import socket
 
@@ -30,19 +31,27 @@ parser.add_argument('ipv4_address')
 # Read in the IPv4 address.
 args = parser.parse_args()
 
-# Scan TCP ports
-PORT_MAX = 2**16 - 1
-PORT_MIN = 1
-open_tcp_ports = []
-with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-	for port in range(PORT_MIN, PORT_MAX + 1):
+# For multiple simultaneous port scans
+def scan_port_async(ipv4_address, port):
+	with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
 		try:
-			sock.connect((args.ipv4_address, port))
-			open_tcp_ports.append(port)
-			print(f"Open TCP port: {port}")
+			sock.connect((ipv4_address, port))
+			sock.close()
+			return port
 		except:
-			pass
-		sock.close()
+			return None
 
-if len(open_tcp_ports) == 0:
+PORT_MIN = 1
+PORT_MAX = 2 ** 16 - 1
+MAX_SIMUL_SCANS = 8
+
+## Scan batches of ports at the same time in batch size MAX_SIMUL_SCANS
+with mp.Pool(processes = MAX_SIMUL_SCANS) as pool:
+	results = set(pool.starmap(scan_port_async, [(args.ipv4_address, port) for port in range(PORT_MIN, PORT_MAX + 1)]))
+	if None in results:
+		results.remove(None)
+
+if len(results) == 0:
 	print("No open TCP ports.")
+else:
+	print(f"Open ports: {results}")
