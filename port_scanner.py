@@ -128,7 +128,7 @@ else:
 			banners_unprocessed.remove(None)
 		banners = dict()
 		for key_val in banners_unprocessed:
-			banners[key_val[0]] = key_val[1]
+			banners[key_val[0]] = key_val[1].decode(errors="ignore").strip()
 
 	# Print ports and banner if found
 	print("Open ports: ")
