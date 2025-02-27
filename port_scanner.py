@@ -3,6 +3,7 @@ import argparse
 import multiprocessing as mp
 import re
 import socket
+import sys
 
 PORT_MAX = 2 ** 16 - 1
 PORT_MIN = 1
@@ -26,28 +27,40 @@ def validate_ipv4_address(ipv4_address):
 				if not (0 <= v <= 255):
 					raise ValueError(v)
 		except:
-			raise argparse.ArgumentTypeError(f"IPv4 address not in the correct range: {ipv4_address}")
+			print(f"IPv4 address not in the correct range: {ipv4_address}")
+			sys.exit(1)
+
 	return ipv4_address
 
 # Validates the input argument port range
 def validate_ports(ports):
-	REGEX = r'^(\d{0,5})\-(\d{0,5})$'
+	REGEX = r'^(\d{0,5})(\-(\d{0,5}))?$'
+	PORT_MIN_CAPT_GRP = 1
+	PORT_MAX_CAPT_GRP = 3
 
 	regex_match = re.match(REGEX, ports)
+
+	wants_scan_one_port = regex_match.group(PORT_MAX_CAPT_GRP) == None
+
 	if regex_match is None:
-		raise argparse.ArgumentTypeError(f"Invalid format for port range: {ports}")
+		print(f"Invalid port range: {ports}")
+		sys.exit(1)
 	else:
 		try:
-			port_from_str = regex_match.group(1)
-			port_to_str = regex_match.group(2)
+			port_from = int(regex_match.group(PORT_MIN_CAPT_GRP))
 
-			port_from = PORT_MIN if port_from_str == '' else int(port_from_str)
-			port_to = PORT_MAX if port_to_str == '' else int(port_to_str)
+			if wants_scan_one_port:
+				port_to = port_from
+			else:
+				port_to = int(regex_match.group(PORT_MAX_CAPT_GRP))
 
 			if not (PORT_MIN <= port_from <= PORT_MAX) or not (PORT_MIN <= port_to <= PORT_MAX):
-				raise argparse.ArgumentTypeError(f'Invalid port range: {port_from}-{port_to}')
-		except:
-			raise argparse.ArgumentTypeError(f'Invalid port range: {ports}')
+				print(f'Invalid port range: {ports}')
+				sys.exit(1)
+
+		except ValueError:
+			print(f'Invalid port range: {ports}')
+			sys.exit(1)
 
 	return (port_from, port_to)
 
@@ -57,7 +70,7 @@ parser = argparse.ArgumentParser(
 	description='Scans an IPv4 address for open TCP ports with a TCP Connect scan.')
 
 parser.add_argument('ipv4_address', help='IPv4 address to scan')
-parser.add_argument('-p' ,'--ports', default='-', help='Range of TCP Ports to scan (e.g. 1-65536)')
+parser.add_argument('-p' ,'--ports', help='Range of TCP Ports to scan (e.g. 123, 1-65536)')
 
 # Read in the IPv4 address.
 args = parser.parse_args()
@@ -78,6 +91,7 @@ def scan_port_async(ipv4_address, port):
 			# print(f"Failure ({e}) on {ipv4_address}:{port}")
 			return None
 
+# Asynchronous banner grab - allows multiple simultaneous scans
 def grab_banner_async(ipv4_address, port):
 	with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
 		try:
@@ -104,7 +118,7 @@ with mp.Pool(processes = MAX_SIMUL_SCANS) as pool:
 if len(open_ports) == 0:
 	print("No open TCP ports.")
 else:
-	# Grab banners
+	# Grab banners with asynchronous scans
 	with mp.Pool(processes = MAX_SIMUL_SCANS) as pool:
 		banners_unprocessed = pool.starmap(grab_banner_async, [(ip_address, port) for port in open_ports])
 
