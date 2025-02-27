@@ -34,13 +34,15 @@ def validate_ipv4_address(ipv4_address):
 
 # Validates the input argument port range
 def validate_ports(ports):
+	if ports is None:
+		print(f"Invalid port range.")
+		sys.exit(1)
+
 	REGEX = r'^(\d{0,5})(\-(\d{0,5}))?$'
 	PORT_MIN_CAPT_GRP = 1
 	PORT_MAX_CAPT_GRP = 3
 
 	regex_match = re.match(REGEX, ports)
-
-	wants_scan_one_port = regex_match.group(PORT_MAX_CAPT_GRP) == None
 
 	if regex_match is None:
 		print(f"Invalid port range: {ports}")
@@ -48,6 +50,8 @@ def validate_ports(ports):
 	else:
 		try:
 			port_from = int(regex_match.group(PORT_MIN_CAPT_GRP))
+
+			wants_scan_one_port = regex_match.group(PORT_MAX_CAPT_GRP) == None
 
 			if wants_scan_one_port:
 				port_to = port_from
