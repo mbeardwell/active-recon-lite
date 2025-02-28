@@ -63,14 +63,6 @@ def validate_ports(ports):
 
 	return (port_from, port_to)
 
-# Setup Argparse to parse input strings.
-parser = argparse.ArgumentParser(
-	prog='port_scanner.py',
-	description='Scans an IPv4 address for open TCP ports with a TCP Connect scan.')
-
-parser.add_argument('ipv4_address', help='IPv4 address to scan')
-parser.add_argument('-p' ,'--ports', help='Range of TCP Ports to scan (e.g. 123, 1-65536)')
-
 # Asynchronous port scan - allows multiple simultaneous scans.
 def scan_port_async(ipv4_address, port):
 	with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
@@ -97,6 +89,15 @@ def grab_banner_async(ipv4_address, port):
 			return None
 
 if __name__ == '__main__':
+	# Setup Argparse to parse input strings.
+	parser = argparse.ArgumentParser(
+		prog='port_scanner.py',
+		description='Scans an IPv4 address for open TCP ports with a TCP Connect scan.')
+
+	parser.add_argument('ipv4_address', help='IPv4 address to scan')
+	parser.add_argument('-p' ,'--ports', help='Range of TCP Ports to scan (e.g. 123, 1-65536)')
+	parser.add_argument('-v', '--verbose', action='store_true')
+
 	# Read in the IPv4 address and port range.
 	try:
 		args = parser.parse_args()
@@ -108,7 +109,14 @@ if __name__ == '__main__':
 		sys.exit(1)
 
 	## Asynchronous port scanning.
-	print("Scanning TCP ports...")
+	if args.verbose:
+		if port_from == port_to:
+			print(f"Running TCP Connect scans for IPv4 address {ip_address} for port {port_from}")
+		else:
+			print(f"Running TCP Connect scans for IPv4 address {ip_address} for port range {port_from}-{port_to}")
+	else:
+		print("Scanning TCP ports")
+
 	with mp.Pool(processes = MAX_SIMUL_SCANS) as pool:
 		open_ports_unprocessed = pool.starmap(scan_port_async, [(ip_address, port) for port in range(port_from, port_to + 1)])
 		# Remove 'None' entries and sort results
@@ -119,8 +127,11 @@ if __name__ == '__main__':
 
 	## Print results.
 	if len(open_ports) == 0:
-		print("No open TCP ports.")
+		print(f"No open TCP ports on {ip_address}")
 	else:
+		if args.verbose:
+			print(f"Grabbing banners for open ports at {ip_address}")
+
 		# Grab banners with asynchronous scans.
 		with mp.Pool(processes = MAX_SIMUL_SCANS) as pool:
 			banners_unprocessed = pool.starmap(grab_banner_async, [(ip_address, port) for port in open_ports])
@@ -133,6 +144,11 @@ if __name__ == '__main__':
 			for key_val in banners_unprocessed:
 				banners[key_val[0]] = key_val[1].decode(errors="ignore").strip()
 
+		if args.verbose:
+			no_banners = {None} == set(banners.values())
+			if no_banners:
+				print(f'No banners found for open ports at {ip_address}')
+
 		# Print ports and banner if found.
 		print("Open ports: ")
 		for port in open_ports:
@@ -143,6 +159,6 @@ if __name__ == '__main__':
 				pass
 
 			if banner is not None:
-				print(f"\t {port} - {banner}")
+				print(f"\t{port} - {banner}")
 			else:
 				print(f"\t{port}")
