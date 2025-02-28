@@ -157,20 +157,22 @@ if __name__ == '__main__':
 
 	# Output results to a file.
 	if args.output is not None:
-		print(f'Writing results to \'{args.output}\'')
+		try:
+			with open(args.output, 'w') as file:
+				print(f'Writing results to \'{args.output}\'')
 
-		with open(args.output, 'w') as file:
-			file.write(f'TCP Connect scan results for IPv4 address {ip_address} with TCP port range {port_from} to {port_to}\n')
+				file.write(f'TCP Connect scan results for IPv4 address {ip_address} with TCP port range {port_from} to {port_to}\n')
 
-			if len(open_ports.keys()) == 0:
-				file.write(f'No open TCP ports in range {port_from} to {port_to}\n')
-			else:
-				file.write(f'Open TCP ports in range {port_from} to {port_to}:\n')
-				for port in sorted(open_ports.keys()):
-					banner = open_ports.get(port)
+				if len(open_ports.keys()) == 0:
+					file.write(f'No open TCP ports in range {port_from} to {port_to}\n')
+				else:
+					file.write(f'Open TCP ports in range {port_from} to {port_to}:\n')
+					for port in sorted(open_ports.keys()):
+						banner = open_ports.get(port)
 
-					if banner is not None:
-						file.write(f'{port} | Banner: {banner}\n')
-					else:
-						file.write(f'{port}\n')
-
+						if banner is not None:
+							file.write(f'{port} | Banner: {banner}\n')
+						else:
+							file.write(f'{port}\n')
+		except IOError:
+			print(f'Failed to write to \'{args.output}\'')
