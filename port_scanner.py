@@ -156,10 +156,7 @@ if __name__ == '__main__':
 		# Print ports and banner if found.
 		print("Open ports: ")
 		for port in open_ports:
-			try:
-				banner = banners[port]
-			except KeyError:
-				banner = None
+			banner = banners.get(port, None)
 
 			if banner is not None:
 				print(f"\t{port} - {banner}")
@@ -178,10 +175,7 @@ if __name__ == '__main__':
 			else:
 				file.write(f'Open TCP ports in range {port_from} to {port_to}:\n')
 				for port in open_ports:
-					try:
-						banner = banners[port]
-					except KeyError:
-						banner = None
+					banner = banners.get(port, None)
 
 					if banner is not None:
 						file.write(f'{port} | Banner: {banner}\n')
