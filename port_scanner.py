@@ -27,16 +27,14 @@ def validate_ipv4_address(ipv4_address):
 				if not (0 <= v <= 255):
 					raise ValueError(v)
 		except:
-			print(f"IPv4 address not in the correct range: {ipv4_address}")
-			sys.exit(1)
+			argparse.ArgumentTypeError(f"Invalid format for IPv4 address: {ipv4_address}")
 
 	return ipv4_address
 
-# Validates the input argument port range
+# Validates the input argument port range.
 def validate_ports(ports):
 	if ports is None:
-		print(f"Invalid port range.")
-		sys.exit(1)
+		return (PORT_MIN, PORT_MAX)
 
 	REGEX = r'^(\d{0,5})(\-(\d{0,5}))?$'
 	PORT_MIN_CAPT_GRP = 1
@@ -45,8 +43,7 @@ def validate_ports(ports):
 	regex_match = re.match(REGEX, ports)
 
 	if regex_match is None:
-		print(f"Invalid port range: {ports}")
-		sys.exit(1)
+		raise argparse.ArgumentTypeError(f"Invalid port range: {ports}")
 	else:
 		try:
 			port_from = int(regex_match.group(PORT_MIN_CAPT_GRP))
@@ -59,12 +56,10 @@ def validate_ports(ports):
 				port_to = int(regex_match.group(PORT_MAX_CAPT_GRP))
 
 			if not (PORT_MIN <= port_from <= PORT_MAX) or not (PORT_MIN <= port_to <= PORT_MAX):
-				print(f'Invalid port range: {ports}')
-				sys.exit(1)
+				raise argparse.ArgumentTypeError(f'Invalid port range: {ports}')
 
 		except ValueError:
-			print(f'Invalid port range: {ports}')
-			sys.exit(1)
+			raise argparse.ArgumentTypeError(f'Invalid port range: {ports}')
 
 	return (port_from, port_to)
 
@@ -76,12 +71,7 @@ parser = argparse.ArgumentParser(
 parser.add_argument('ipv4_address', help='IPv4 address to scan')
 parser.add_argument('-p' ,'--ports', help='Range of TCP Ports to scan (e.g. 123, 1-65536)')
 
-# Read in the IPv4 address.
-args = parser.parse_args()
-ip_address = validate_ipv4_address(args.ipv4_address)
-port_from, port_to = validate_ports(args.ports)
-
-# Asynchronous port scan - allows multiple simultaneous scans
+# Asynchronous port scan - allows multiple simultaneous scans.
 def scan_port_async(ipv4_address, port):
 	with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
 		try:
@@ -92,10 +82,9 @@ def scan_port_async(ipv4_address, port):
 		except ConnectionRefusedError:
 			return None
 		except Exception as e:
-			# print(f"Failure ({e}) on {ipv4_address}:{port}")
 			return None
 
-# Asynchronous banner grab - allows multiple simultaneous scans
+# Asynchronous banner grab - allows multiple simultaneous scans.
 def grab_banner_async(ipv4_address, port):
 	with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
 		try:
@@ -105,45 +94,55 @@ def grab_banner_async(ipv4_address, port):
 			sock.close()
 			return (port, banner)
 		except Exception as e:
-			# print(f"Failure ({e}) on {ipv4_address}:{port}")
 			return None
 
-## Asynchronous port scanning
-print("Scanning TCP ports...")
-with mp.Pool(processes = MAX_SIMUL_SCANS) as pool:
-	open_ports_unprocessed = pool.starmap(scan_port_async, [(ip_address, port) for port in range(port_from, port_to + 1)])
-	# Remove 'None' entries and sort results
-	open_ports_unprocessed = set(open_ports_unprocessed)
-	if None in open_ports_unprocessed:
-		open_ports_unprocessed.remove(None)
-	open_ports = sorted(open_ports_unprocessed)
+if __name__ == '__main__':
+	# Read in the IPv4 address and port range.
+	try:
+		args = parser.parse_args()
+		ip_address = validate_ipv4_address(args.ipv4_address)
+		port_from, port_to = validate_ports(args.ports)
 
-## Print results
-if len(open_ports) == 0:
-	print("No open TCP ports.")
-else:
-	# Grab banners with asynchronous scans
+	except argparse.ArgumentTypeError as e:
+		print(f"{e}")
+		sys.exit(1)
+
+	## Asynchronous port scanning.
+	print("Scanning TCP ports...")
 	with mp.Pool(processes = MAX_SIMUL_SCANS) as pool:
-		banners_unprocessed = pool.starmap(grab_banner_async, [(ip_address, port) for port in open_ports])
+		open_ports_unprocessed = pool.starmap(scan_port_async, [(ip_address, port) for port in range(port_from, port_to + 1)])
+		# Remove 'None' entries and sort results
+		open_ports_unprocessed = set(open_ports_unprocessed)
+		if None in open_ports_unprocessed:
+			open_ports_unprocessed.remove(None)
+		open_ports = sorted(open_ports_unprocessed)
 
-		# Filter and sort banner messages by TCP port number
-		banners_unprocessed = set(banners_unprocessed)
-		if None in banners_unprocessed:
-			banners_unprocessed.remove(None)
-		banners = dict()
-		for key_val in banners_unprocessed:
-			banners[key_val[0]] = key_val[1].decode(errors="ignore").strip()
+	## Print results.
+	if len(open_ports) == 0:
+		print("No open TCP ports.")
+	else:
+		# Grab banners with asynchronous scans.
+		with mp.Pool(processes = MAX_SIMUL_SCANS) as pool:
+			banners_unprocessed = pool.starmap(grab_banner_async, [(ip_address, port) for port in open_ports])
 
-	# Print ports and banner if found
-	print("Open ports: ")
-	for port in open_ports:
-		try:
-			banner = banners[port]
-		except KeyError:
-			banner = None
-			pass
+			# Filter and sort banner messages by TCP port number.
+			banners_unprocessed = set(banners_unprocessed)
+			if None in banners_unprocessed:
+				banners_unprocessed.remove(None)
+			banners = dict()
+			for key_val in banners_unprocessed:
+				banners[key_val[0]] = key_val[1].decode(errors="ignore").strip()
 
-		if banner is not None:
-			print(f"\t {port} - {banner}")
-		else:
-			print(f"\t{port}")
+		# Print ports and banner if found.
+		print("Open ports: ")
+		for port in open_ports:
+			try:
+				banner = banners[port]
+			except KeyError:
+				banner = None
+				pass
+
+			if banner is not None:
+				print(f"\t {port} - {banner}")
+			else:
+				print(f"\t{port}")
