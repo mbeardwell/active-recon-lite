@@ -150,10 +150,10 @@ if __name__ == '__main__':
 		for port in sorted(open_ports.keys()):
 			banner = open_ports.get(port)
 
-			if banner is not None:
-				print(f'\t{port} - {banner}')
-			else:
-				print(f'\t{port}')
+			if banner is None:
+				banner = 'No banner received'
+
+			print(f'{port} | Banner: {banner}\n')
 
 	# Output results to a file.
 	if args.output is not None:
@@ -170,9 +170,10 @@ if __name__ == '__main__':
 					for port in sorted(open_ports.keys()):
 						banner = open_ports.get(port)
 
-						if banner is not None:
-							file.write(f'{port} | Banner: {banner}\n')
-						else:
-							file.write(f'{port}\n')
+						if banner is None:
+							banner = 'No banner received'
+
+						file.write(f'{port} | Banner: {banner}\n')
+
 		except IOError:
 			print(f'Failed to write to \'{args.output}\'')
