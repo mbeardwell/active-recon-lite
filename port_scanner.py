@@ -5,21 +5,23 @@ import re
 import socket
 import sys
 
-PORT_MAX = 2 ** 16 - 1
-PORT_MIN = 1
+VERSION = '1.0'
 MAX_SIMUL_SCANS = 8
 BANNER_LEN = 1024 #bytes
 SCAN_TIMEOUT = 5 #seconds
 
+PORT_MAX = 2 ** 16 - 1
+PORT_MIN = 1
+
 # Validates the input argument IPv4 address.
 def validate_ipv4_address(ipv4_address):
-	REGEX = r"^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$"
+	REGEX = r'^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$'
 	IPV4_NUM_ARGS = 4
 
 	regex_match = re.match(REGEX, ipv4_address)
 
 	if regex_match is None:
-		raise argparse.ArgumentTypeError(f"Invalid format for IPv4 address: {ipv4_address}")
+		raise argparse.ArgumentTypeError(f'Invalid format for IPv4 address: {ipv4_address}')
 	else:
 		try:
 			values = [int(regex_match.group(i)) for i in range(1,IPV4_NUM_ARGS+1)]
@@ -27,7 +29,7 @@ def validate_ipv4_address(ipv4_address):
 				if not (0 <= v <= 255):
 					raise ValueError(v)
 		except:
-			argparse.ArgumentTypeError(f"Invalid format for IPv4 address: {ipv4_address}")
+			argparse.ArgumentTypeError(f'Invalid format for IPv4 address: {ipv4_address}')
 
 	return ipv4_address
 
@@ -43,7 +45,7 @@ def validate_ports(ports):
 	regex_match = re.match(REGEX, ports)
 
 	if regex_match is None:
-		raise argparse.ArgumentTypeError(f"Invalid port range: {ports}")
+		raise argparse.ArgumentTypeError(f'Invalid port range: {ports}')
 	else:
 		try:
 			port_from = int(regex_match.group(PORT_MIN_CAPT_GRP))
@@ -76,7 +78,7 @@ def scan_port_async(ipv4_address, port):
 			return None
 
 		try:
-			banner = sock.recv(BANNER_LEN).decode(errors="ignore").strip()
+			banner = sock.recv(BANNER_LEN).decode(errors='ignore').strip()
 		except TimeoutError:
 			banner = None
 
@@ -84,7 +86,14 @@ def scan_port_async(ipv4_address, port):
 
 		return (port, banner)
 
+def print_basic_info():
+	print(f'Port scanner version {VERSION}')
+	print('Author: Matthew Beardwell')
+	print('Performs a basic TCP connect scan and grabs banners where they exist.')
+
 if __name__ == '__main__':
+	print_basic_info()
+
 	# Setup Argparse to parse input strings.
 	parser = argparse.ArgumentParser(
 		prog='port_scanner.py',
@@ -102,17 +111,17 @@ if __name__ == '__main__':
 		port_from, port_to = validate_ports(args.ports)
 
 	except argparse.ArgumentTypeError as e:
-		print(f"{e}")
+		print(f'{e}')
 		sys.exit(1)
 
 	## Asynchronous port scanning.
 	if args.verbose:
 		if port_from == port_to:
-			print(f"Running TCP Connect scans for IPv4 address {ip_address} for port {port_from}")
+			print(f'Running TCP Connect scans for IPv4 address {ip_address} for port {port_from}')
 		else:
-			print(f"Running TCP Connect scans for IPv4 address {ip_address} for port range {port_from}-{port_to}")
+			print(f'Running TCP Connect scans for IPv4 address {ip_address} for port range {port_from}-{port_to}')
 	else:
-		print("Scanning TCP ports")
+		print('Scanning TCP ports')
 
 	with mp.Pool(processes = MAX_SIMUL_SCANS) as pool:
 		open_ports_unprocessed = pool.starmap(scan_port_async, [(ip_address, port) for port in range(port_from, port_to + 1)])
@@ -132,23 +141,23 @@ if __name__ == '__main__':
 	## Print results.
 	if len(open_ports.keys()) == 0:
 		if port_from == port_to:
-			print(f"Port {port_from} is not open at {ip_address}")
+			print(f'Port {port_from} is not open at {ip_address}')
 		else:
 			print(f'No open ports in the range {port_from}-{port_to} at {ip_address}') 
 	else:
 		# Print ports and banner if found.
-		print("Open ports: ")
+		print('Open ports: ')
 		for port in sorted(open_ports.keys()):
 			banner = open_ports.get(port)
 
 			if banner is not None:
-				print(f"\t{port} - {banner}")
+				print(f'\t{port} - {banner}')
 			else:
-				print(f"\t{port}")
+				print(f'\t{port}')
 
 	# Output results to a file.
 	if args.output is not None:
-		print(f'Writing results to file {args.output}')
+		print(f'Writing results to \'{args.output}\'')
 
 		with open(args.output, 'w') as file:
 			file.write(f'TCP Connect scan results for IPv4 address {ip_address} with TCP port range {port_from} to {port_to}\n')
