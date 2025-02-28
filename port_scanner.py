@@ -167,7 +167,7 @@ if __name__ == '__main__':
 	if args.output is not None:
 		print(f'Writing results to file {args.output}')
 
-		with open(args.output, 'a') as file:
+		with open(args.output, 'w') as file:
 			file.write(f'TCP Connect scan results for IPv4 address {ip_address} with TCP port range {port_from} to {port_to}\n')
 
 			if len(open_ports) == 0:
