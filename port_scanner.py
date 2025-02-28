@@ -66,27 +66,23 @@ def validate_ports(ports):
 # Asynchronous port scan - allows multiple simultaneous scans.
 def scan_port_async(ipv4_address, port):
 	with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+		sock.settimeout(SCAN_TIMEOUT)
+
 		try:
-			sock.settimeout(SCAN_TIMEOUT)
 			sock.connect((ipv4_address, port))
-			sock.close()
-			return port
 		except ConnectionRefusedError:
 			return None
 		except Exception as e:
 			return None
 
-# Asynchronous banner grab - allows multiple simultaneous scans.
-def grab_banner_async(ipv4_address, port):
-	with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
 		try:
-			sock.settimeout(SCAN_TIMEOUT)
-			sock.connect((ipv4_address, port))
-			banner = sock.recv(BANNER_LEN)
-			sock.close()
-			return (port, banner)
-		except Exception as e:
-			return None
+			banner = sock.recv(BANNER_LEN).decode(errors="ignore").strip()
+		except TimeoutError:
+			banner = None
+
+		sock.close()
+
+		return (port, banner)
 
 if __name__ == '__main__':
 	# Setup Argparse to parse input strings.
@@ -120,43 +116,30 @@ if __name__ == '__main__':
 
 	with mp.Pool(processes = MAX_SIMUL_SCANS) as pool:
 		open_ports_unprocessed = pool.starmap(scan_port_async, [(ip_address, port) for port in range(port_from, port_to + 1)])
+
 		# Remove 'None' entries and sort results
 		open_ports_unprocessed = set(open_ports_unprocessed)
+
 		if None in open_ports_unprocessed:
 			open_ports_unprocessed.remove(None)
-		open_ports = sorted(open_ports_unprocessed)
+
+		open_ports_unprocessed = sorted(open_ports_unprocessed, key=lambda t: t[0])
+		open_ports = dict()
+
+		for (port, banner) in open_ports_unprocessed:
+			open_ports[port] = banner
 
 	## Print results.
-	if len(open_ports) == 0:
+	if len(open_ports.keys()) == 0:
 		if port_from == port_to:
 			print(f"Port {port_from} is not open at {ip_address}")
 		else:
 			print(f'No open ports in the range {port_from}-{port_to} at {ip_address}') 
 	else:
-		if args.verbose:
-			print(f"Grabbing banners for open ports at {ip_address}")
-
-		# Grab banners with asynchronous scans.
-		with mp.Pool(processes = MAX_SIMUL_SCANS) as pool:
-			banners_unprocessed = pool.starmap(grab_banner_async, [(ip_address, port) for port in open_ports])
-
-			# Filter and sort banner messages by TCP port number.
-			banners_unprocessed = set(banners_unprocessed)
-			if None in banners_unprocessed:
-				banners_unprocessed.remove(None)
-			banners = dict()
-			for key_val in banners_unprocessed:
-				banners[key_val[0]] = key_val[1].decode(errors="ignore").strip()
-
-		if args.verbose:
-			no_banners = {None} == set(banners.values())
-			if no_banners:
-				print(f'No banners found for open ports at {ip_address}')
-
 		# Print ports and banner if found.
 		print("Open ports: ")
-		for port in open_ports:
-			banner = banners.get(port, None)
+		for port in sorted(open_ports.keys()):
+			banner = open_ports.get(port)
 
 			if banner is not None:
 				print(f"\t{port} - {banner}")
@@ -170,12 +153,12 @@ if __name__ == '__main__':
 		with open(args.output, 'w') as file:
 			file.write(f'TCP Connect scan results for IPv4 address {ip_address} with TCP port range {port_from} to {port_to}\n')
 
-			if len(open_ports) == 0:
+			if len(open_ports.keys()) == 0:
 				file.write(f'No open TCP ports in range {port_from} to {port_to}\n')
 			else:
 				file.write(f'Open TCP ports in range {port_from} to {port_to}:\n')
-				for port in open_ports:
-					banner = banners.get(port, None)
+				for port in sorted(open_ports.keys()):
+					banner = open_ports.get(port)
 
 					if banner is not None:
 						file.write(f'{port} | Banner: {banner}\n')
