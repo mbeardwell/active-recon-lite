@@ -97,6 +97,7 @@ if __name__ == '__main__':
 	parser.add_argument('ipv4_address', help='IPv4 address to scan')
 	parser.add_argument('-p' ,'--ports', help='Range of TCP Ports to scan (e.g. 123, 1-65536)')
 	parser.add_argument('-v', '--verbose', action='store_true')
+	parser.add_argument('-o', '--output', help='Filename to write output to')
 
 	# Read in the IPv4 address and port range.
 	try:
@@ -127,7 +128,10 @@ if __name__ == '__main__':
 
 	## Print results.
 	if len(open_ports) == 0:
-		print(f"No open TCP ports on {ip_address}")
+		if port_from == port_to:
+			print(f"Port {port_from} is not open at {ip_address}")
+		else:
+			print(f'No open ports in the range {port_from}-{port_to} at {ip_address}') 
 	else:
 		if args.verbose:
 			print(f"Grabbing banners for open ports at {ip_address}")
@@ -156,9 +160,31 @@ if __name__ == '__main__':
 				banner = banners[port]
 			except KeyError:
 				banner = None
-				pass
 
 			if banner is not None:
 				print(f"\t{port} - {banner}")
 			else:
 				print(f"\t{port}")
+
+	# Output results to a file.
+	if args.output is not None:
+		print(f'Writing results to file {args.output}')
+
+		with open(args.output, 'a') as file:
+			file.write(f'TCP Connect scan results for IPv4 address {ip_address} with TCP port range {port_from} to {port_to}\n')
+
+			if len(open_ports) == 0:
+				file.write(f'No open TCP ports in range {port_from} to {port_to}\n')
+			else:
+				file.write(f'Open TCP ports in range {port_from} to {port_to}:\n')
+				for port in open_ports:
+					try:
+						banner = banners[port]
+					except KeyError:
+						banner = None
+
+					if banner is not None:
+						file.write(f'{port} | Banner: {banner}\n')
+					else:
+						file.write(f'{port}\n')
+
