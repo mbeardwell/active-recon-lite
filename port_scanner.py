@@ -5,13 +5,6 @@ import re
 import socket
 import sys
 
-try:
-	from scapy.all import *
-except ImportError:
-	print("Dependencies not installed. Please try:")
-	print("\tpip install -r requirements.txt")
-	sys.exit(1)
-
 VERSION = '1.0'
 MAX_SIMUL_SCANS = 8
 BANNER_LEN = 1024 #bytes
