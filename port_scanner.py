@@ -86,6 +86,28 @@ def scan_port_async(ipv4_address, port):
 
 		return (port, banner)
 
+def is_reachable(ipv4_address, port=80):
+	with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+		sock.settimeout(SCAN_TIMEOUT)
+
+		try:
+			sock.connect((ipv4_address, port))
+			sock.close()
+			return True
+		except TimeoutError:
+			sock.close()
+			return False
+
+def get_response(prompt):
+	response = None
+	while not response in ['y', 'n']:
+		response = input(prompt)
+		if len(response) == 0:
+			continue
+		response = response.lower()[0]
+
+	return response == 'y'
+
 def print_basic_info():
 	print(f'Port scanner version {VERSION}')
 	print('Author: Matthew Beardwell')
@@ -103,6 +125,7 @@ if __name__ == '__main__':
 	parser.add_argument('-p' ,'--ports', help='Range of TCP Ports to scan (e.g. 123, 1-65536)')
 	parser.add_argument('-v', '--verbose', action='store_true')
 	parser.add_argument('-o', '--output', help='Filename to write output to')
+	parser.add_argument('-y', '--yes', action='store_true', help='Replies yes to any prompts')
 
 	# Read in the IPv4 address and port range.
 	try:
@@ -113,6 +136,17 @@ if __name__ == '__main__':
 	except argparse.ArgumentTypeError as e:
 		print(f'{e}')
 		sys.exit(1)
+
+	## Check host is reachable.
+	## This is not foolproof as a firewall may filter these packets even when the host is reachable via other ports.
+	if not is_reachable(ip_address):
+		print(f'Host {ip_address} appears to be unreachable.')
+		if args.yes:
+			print('Would you like to end scan? (Y/n) >>> Y')
+			sys.exit()
+		else:
+			if get_response('Would you like to end scan? (Y/n) >>> '):
+				sys.exit()
 
 	## Asynchronous port scanning.
 	if args.verbose:
