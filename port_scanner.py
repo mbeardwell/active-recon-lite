@@ -8,7 +8,7 @@ import sys
 VERSION = '1.0'
 MAX_SIMUL_SCANS = 8
 BANNER_LEN = 1024 #bytes
-SCAN_TIMEOUT = 5 #seconds
+SCAN_TIMEOUT = 3 #seconds
 
 PORT_MAX = 2 ** 16 - 1
 PORT_MIN = 1
@@ -28,8 +28,8 @@ def validate_ipv4_address(ipv4_address):
 			for v in values:
 				if not (0 <= v <= 255):
 					raise ValueError(v)
-		except:
-			argparse.ArgumentTypeError(f'Invalid format for IPv4 address: {ipv4_address}')
+		except ValueError:
+			raise argparse.ArgumentTypeError(f'Invalid format for IPv4 address: {ipv4_address}')
 
 	return ipv4_address
 
@@ -86,17 +86,21 @@ def scan_port_async(ipv4_address, port):
 
 		return (port, banner)
 
-def is_reachable(ipv4_address, port=80):
+def is_reachable_async(ipv4_address, port):
 	with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
 		sock.settimeout(SCAN_TIMEOUT)
-
 		try:
 			sock.connect((ipv4_address, port))
 			sock.close()
 			return True
-		except TimeoutError:
+		except socket.timeout:
 			sock.close()
 			return False
+
+def is_reachable(ipv4_address, ports=[20, 21, 22, 23, 25, 80, 443]):
+	with mp.Pool(processes = MAX_SIMUL_SCANS) as pool:
+		successes = pool.starmap(is_reachable_async, [(ipv4_address, port) for port in ports])
+		return True in successes
 
 def get_response(prompt):
 	response = None
@@ -140,7 +144,7 @@ if __name__ == '__main__':
 	## Check host is reachable.
 	## This is not foolproof as a firewall may filter these packets even when the host is reachable via other ports.
 	if not is_reachable(ip_address):
-		print(f'Host {ip_address} appears to be unreachable.')
+		print(f'Host {ip_address} appears to be unreachable. The scan may not show valid results.')
 		if args.yes:
 			print('Would you like to end scan? (Y/n) >>> Y')
 			sys.exit()
@@ -166,7 +170,7 @@ if __name__ == '__main__':
 		if None in open_ports_unprocessed:
 			open_ports_unprocessed.remove(None)
 
-		open_ports_unprocessed = sorted(open_ports_unprocessed, key=lambda t: t[0])
+		open_ports_unprocessed.sort(key=lambda t: t[0])
 		open_ports = dict()
 
 		for (port, banner) in open_ports_unprocessed:
@@ -187,7 +191,7 @@ if __name__ == '__main__':
 			if banner is None:
 				banner = 'No banner received'
 
-			print(f'{port} | Banner: {banner}\n')
+			print(f'{port} | Banner: {banner}')
 
 	# Output results to a file.
 	if args.output is not None:
