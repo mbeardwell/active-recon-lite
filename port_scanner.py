@@ -96,8 +96,6 @@ def is_reachable_async(ipv4_address, port):
 			return True
 		except socket.timeout:
 			return False
-		finally:
-			sock.close()
 
 def is_reachable(ipv4_address, ports=[20, 21, 22, 23, 25, 80, 443]):
 	with mp.Pool(processes = MAX_SIMUL_SCANS) as pool:
