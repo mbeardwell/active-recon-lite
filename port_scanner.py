@@ -75,6 +75,8 @@ def scan_port_async(ipv4_address, port):
 		except ConnectionRefusedError:
 			return None
 		except Exception as e:
+			if args.verbose:
+				print(f'Error: {e}')
 			return None
 
 		try:
@@ -91,18 +93,18 @@ def is_reachable_async(ipv4_address, port):
 		sock.settimeout(SCAN_TIMEOUT)
 		try:
 			sock.connect((ipv4_address, port))
-			sock.close()
 			return True
 		except socket.timeout:
-			sock.close()
 			return False
+		finally:
+			sock.close()
 
 def is_reachable(ipv4_address, ports=[20, 21, 22, 23, 25, 80, 443]):
 	with mp.Pool(processes = MAX_SIMUL_SCANS) as pool:
 		successes = pool.starmap(is_reachable_async, [(ipv4_address, port) for port in ports])
 		return True in successes
 
-def get_response(prompt):
+def get_user_response(prompt):
 	response = None
 	while not response in ['y', 'n']:
 		response = input(prompt)
@@ -149,7 +151,7 @@ if __name__ == '__main__':
 			print('Would you like to end scan? (Y/n) >>> Y')
 			sys.exit()
 		else:
-			if get_response('Would you like to end scan? (Y/n) >>> '):
+			if get_user_response('Would you like to end scan? (Y/n) >>> '):
 				sys.exit()
 
 	## Asynchronous port scanning.
