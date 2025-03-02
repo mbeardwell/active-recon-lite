@@ -96,6 +96,8 @@ def is_reachable_async(ipv4_address, port):
 			return True
 		except socket.timeout:
 			return False
+		except ConnectionRefusedError:
+			return False
 
 def is_reachable(ipv4_address, ports=[20, 21, 22, 23, 25, 80, 443]):
 	with mp.Pool(processes = MAX_SIMUL_SCANS) as pool:
@@ -146,10 +148,9 @@ if __name__ == '__main__':
 	if not is_reachable(ip_address):
 		print(f'Host {ip_address} appears to be unreachable. The scan may not show valid results.')
 		if args.yes:
-			print('Would you like to end scan? (Y/n) >>> Y')
-			sys.exit()
+			print('Would you like to continue scan? (Y/n) >>> Y')
 		else:
-			if get_user_response('Would you like to end scan? (Y/n) >>> '):
+			if not get_user_response('Would you like to continue scan? (Y/n) >>> '):
 				sys.exit()
 
 	## Asynchronous port scanning.
@@ -170,7 +171,7 @@ if __name__ == '__main__':
 		if None in open_ports_unprocessed:
 			open_ports_unprocessed.remove(None)
 
-		open_ports_unprocessed.sort(key=lambda t: t[0])
+		open_ports_unprocessed = sorted(open_ports_unprocessed, key=lambda t: t[0])
 		open_ports = dict()
 
 		for (port, banner) in open_ports_unprocessed:
