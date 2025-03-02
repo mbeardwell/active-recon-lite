@@ -1,5 +1,5 @@
 # Simple Port Scanner
-A collection of cybersecurity-related scripts.
+A basic TCP port scanner.
 
 ## Author
 [Matthew Beardwell](https://github.com/mbeardwell)
