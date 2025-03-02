@@ -18,8 +18,10 @@ cd simple-port-scanner
 
 3. Run the program.
 ```bash
-python3 port_scanner.py
+python3 port_scanner.py -h
 ```
 
 ## Author
 [Matthew Beardwell](https://github.com/mbeardwell)
+
+* * *
