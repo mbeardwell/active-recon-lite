@@ -5,19 +5,18 @@ A basic TCP port scanner.
 [Matthew Beardwell](https://github.com/mbeardwell)
 
 ## Installation instructions
-To run these scripts on your computer, please follow the instructions below. At the moment, this guide covers **Linux-based operating systems**.
+To run the port scanner please follow the instructions below. At the moment, this guide covers **Linux-based operating systems**.
 
 1. Ensure you have python3 and python3-pip installed. For example:
 ```
 sudo apt update
-sudo apt install python3 python3-pip
+sudo apt install python3
 ```
 
 2. Download code and install dependencies.
 ```
 git clone https://github.com/mbeardwell/simple-port-scanner.git
-cd Cybersecurity-Scripts
-pip install -r requirements.txt
+cd simple-port-scanner
 ```
 
 3. Run the code. For example for 'port_scanner.py':
