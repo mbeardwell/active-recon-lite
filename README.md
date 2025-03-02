@@ -1,4 +1,4 @@
-# Cybersecurity Scripts
+# Simple Port Scanner
 A collection of cybersecurity-related scripts.
 
 ## Author
