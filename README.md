@@ -2,7 +2,7 @@
 A basic TCP port scanner.
 
 ## Installation
-To run the port scanner please follow the instructions below. At the moment, this guide covers **Linux-based operating systems**.
+To run the port scanner please follow the instructions below.
 
 ### Prerequisites
 Ensure you have **Python 3.7+** installed.
