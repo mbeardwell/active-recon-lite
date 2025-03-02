@@ -15,7 +15,7 @@ sudo apt install python3 python3-pip
 
 2. Download code and install dependencies.
 ```
-git clone https://github.com/mbeardwell/Cybersecurity-Scripts.git
+git clone https://github.com/mbeardwell/simple-port-scanner.git
 cd Cybersecurity-Scripts
 pip install -r requirements.txt
 ```
