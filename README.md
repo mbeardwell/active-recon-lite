@@ -1,4 +1,4 @@
-# Simple Port Scanner
+# ActiveReconLite
 A basic TCP port scanner.
 
 ## Installation
@@ -17,8 +17,5 @@ cd simple-port-scanner
 ```bash
 python3 port_scanner.py -h
 ```
-
-## Author
-[Matthew Beardwell](https://github.com/mbeardwell)
 
 * * *
