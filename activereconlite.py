@@ -124,7 +124,7 @@ if __name__ == '__main__':
 
 	# Setup Argparse to parse input strings.
 	parser = argparse.ArgumentParser(
-		prog='port_scanner.py',
+		prog='activereconlite.py',
 		description='Scans an IPv4 address for open TCP ports with a TCP Connect scan.')
 
 	parser.add_argument('ipv4_address', help='IPv4 address to scan')
