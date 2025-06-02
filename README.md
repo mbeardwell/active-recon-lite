@@ -9,13 +9,13 @@ Ensure you have **Python 3.7+** installed.
 
 1. Clone the repository
 ```bash
-git clone https://github.com/mbeardwell/simple-port-scanner.git
-cd simple-port-scanner
+git clone https://github.com/mbeardwell/active-recon-lite.git
+cd active-recon-lite
 ```
 
 2. Run the program
 ```bash
-python3 port_scanner.py -h
+python3 activereconlite.py -h
 ```
 
 * * *
